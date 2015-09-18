@@ -87,7 +87,7 @@ void showNumber(uint8_t num) {
     for (uint8_t i=0; i<num; i++) { twiddle(); }
 }
 
-void showTime(void) {
+void showHours(void) {
     //Hours Tens
     if (hourTen > 0) {
         showNumber(hourTen);
@@ -101,7 +101,9 @@ void showTime(void) {
     PORTC |= HOURO;
     _delay_ms(1000);
     PORTC &= ~HOURO;
-    
+}
+
+void showMinutes(void) {
     //Minutes Tens
     showNumber(minTen);
     PORTC |= MINST;
@@ -115,16 +117,58 @@ void showTime(void) {
     PORTC &= ~MINSO;
 }
 
+void showTime(void) {
+    showHours();
+    showMinutes();
+}
+
+void incHours(void) {
+    //Only used by main so disable interrupts
+    cli();
+    ++hourOne;
+    if (hourTen && (hourOne == 3)) {
+        hourTen = 0;
+        hourOne = 1;
+    }
+    else if (hourOne == 10) {
+        hourOne = 0;
+        ++hourTen;
+    }
+    seconds = 0;
+    sei();
+}
+
+void incMinutes(void) {
+    //Only used by main so disable interrupts
+    cli();
+    if (++minOne == 10) {
+        minOne = 0;
+        if (++minTen == 6) {
+            minTen = 0;
+        }
+    }
+    seconds = 0;
+    sei();
+}
+
 int main(void)
 {
     init_IO();
     init_RTC();
     while(1)
     {
-        if ((PIND & BUTSHOW) != BUTSHOW) { showTime(); }
+        if (~PIND & BUTSHOW) { showTime(); }
         if (showTimeFlag) {
             showTimeFlag = 0;
             showTime();
+        }
+        if (~PIND & BUTHOUR) {
+            incHours();
+            showHours();
+        }
+        if (~PIND & BUTMIN) {
+            incMinutes();
+            showMinutes();
         }
     }
 
